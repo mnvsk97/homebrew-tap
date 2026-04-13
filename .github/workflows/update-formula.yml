@@ -1,0 +1,110 @@
+name: Update Formula
+
+on:
+  repository_dispatch:
+    types: [update-eyeroll]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to update to (e.g. 0.4.3)"
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            VERSION="${{ github.event.client_payload.version }}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch PyPI metadata
+        id: pypi
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          python3 -c "
+          import urllib.request, json
+          data = json.load(urllib.request.urlopen('https://pypi.org/pypi/eyeroll/${VERSION}/json'))
+          for url in data['urls']:
+              if url['packagetype'] == 'sdist':
+                  print(f\"url={url['url']}\")
+                  print(f\"sha256={url['digests']['sha256']}\")
+                  break
+          " >> "$GITHUB_OUTPUT"
+
+      - name: Fetch dependency metadata
+        id: deps
+        run: |
+          python3 << 'SCRIPT'
+          import urllib.request, json
+
+          deps = ["click", "imageio-ffmpeg", "python-dotenv", "yt-dlp"]
+          resources = []
+
+          for pkg in deps:
+              data = json.load(urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json"))
+              for url in data["urls"]:
+                  if url["packagetype"] == "sdist":
+                      resources.append({
+                          "name": pkg,
+                          "url": url["url"],
+                          "sha256": url["digests"]["sha256"],
+                      })
+                      break
+
+          # Write formula
+          with open("Formula/eyeroll.rb", "w") as f:
+              f.write(f'''class Eyeroll < Formula
+            include Language::Python::Virtualenv
+
+            desc "AI eyes that roll through video footage — watch, understand, turn into code actions"
+            homepage "https://github.com/mnvsk97/eyeroll"
+            url "${{ steps.pypi.outputs.url }}"
+            sha256 "${{ steps.pypi.outputs.sha256 }}"
+            license "MIT"
+
+            depends_on "ffmpeg"
+            depends_on "python@3.12"
+
+          ''')
+              for r in resources:
+                  f.write(f'  resource "{r["name"]}" do\n')
+                  f.write(f'    url "{r["url"]}"\n')
+                  f.write(f'    sha256 "{r["sha256"]}"\n')
+                  f.write(f'  end\n\n')
+
+              f.write('''  def install
+              virtualenv_install_with_resources
+            end
+
+            test do
+              assert_match "Usage:", shell_output("\#{bin}/eyeroll --help")
+            end
+          end
+          ''')
+          SCRIPT
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/eyeroll.rb
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "eyeroll ${VERSION}"
+          git push
