@@ -1,0 +1,103 @@
+name: Update harnessctl Formula
+
+on:
+  repository_dispatch:
+    types: [update-harnessctl]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to update to (e.g. 0.1.0)"
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            VERSION="${{ github.event.client_payload.version }}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download binaries and compute checksums
+        id: checksums
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BASE="https://github.com/mnvsk97/harnessctl/releases/download/v${VERSION}"
+
+          for target in darwin-arm64 darwin-x64 linux-arm64 linux-x64; do
+            curl -sL -o "harnessctl-${target}" "${BASE}/harnessctl-${target}"
+            SHA=$(sha256sum "harnessctl-${target}" | cut -d' ' -f1)
+            echo "${target//-/_}_sha256=$SHA" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Update formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cat > Formula/harnessctl.rb << 'RUBY'
+          class Harnessctl < Formula
+            desc "Universal CLI wrapper for coding agents (Claude Code, Codex, OpenCode)"
+            homepage "https://github.com/mnvsk97/harnessctl"
+            version "VERSION_PLACEHOLDER"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-darwin-arm64"
+                sha256 "DARWIN_ARM64_SHA"
+              end
+              on_intel do
+                url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-darwin-x64"
+                sha256 "DARWIN_X64_SHA"
+              end
+            end
+
+            on_linux do
+              on_arm do
+                url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-linux-arm64"
+                sha256 "LINUX_ARM64_SHA"
+              end
+              on_intel do
+                url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-linux-x64"
+                sha256 "LINUX_X64_SHA"
+              end
+            end
+
+            def install
+              binary = Dir["harnessctl-*"].first
+              bin.install binary => "harnessctl"
+            end
+
+            test do
+              assert_match "harnessctl", shell_output("#{bin}/harnessctl --help")
+            end
+          end
+          RUBY
+
+          # Fix indentation (heredoc adds leading spaces)
+          sed -i 's/^          //' Formula/harnessctl.rb
+
+          # Replace placeholders
+          sed -i "s/VERSION_PLACEHOLDER/${VERSION}/" Formula/harnessctl.rb
+          sed -i "s/DARWIN_ARM64_SHA/${{ steps.checksums.outputs.darwin_arm64_sha256 }}/" Formula/harnessctl.rb
+          sed -i "s/DARWIN_X64_SHA/${{ steps.checksums.outputs.darwin_x64_sha256 }}/" Formula/harnessctl.rb
+          sed -i "s/LINUX_ARM64_SHA/${{ steps.checksums.outputs.linux_arm64_sha256 }}/" Formula/harnessctl.rb
+          sed -i "s/LINUX_X64_SHA/${{ steps.checksums.outputs.linux_x64_sha256 }}/" Formula/harnessctl.rb
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/harnessctl.rb
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "harnessctl ${VERSION}"
+          git push
