@@ -11,14 +11,14 @@ class Harnessctl < Formula
     end
     on_intel do
       url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-darwin-x64"
-      sha256 "761b1bc55b49854ad95391442e309f82f2bac967054d26ada63b8b8274fa256a"
+      sha256 "ec1156f1bc26e19e83338ac226adbfaf6ca82fc9b684f154ac649dc6c50ed5af"
     end
   end
 
   on_linux do
     on_arm do
       url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-linux-arm64"
-      sha256 "a6203a5df7b3817c16690449bca09b7965ee8ce42db701fb51693b330a97d5a1"
+      sha256 "cf577ebd9a56a67ec52fd8769571eceaa2903095c347822212e12bbfa8468dec"
     end
     on_intel do
       url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-linux-x64"
