@@ -1,7 +1,7 @@
 class Harnessctl < Formula
   desc "Universal CLI wrapper for coding agents (Claude Code, Codex, OpenCode)"
   homepage "https://github.com/mnvsk97/harnessctl"
-  version "0.1.0"
+  version "0.1.3"
   license "MIT"
 
   on_macos do
