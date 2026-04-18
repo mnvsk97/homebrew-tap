@@ -1,28 +1,28 @@
 class Harnessctl < Formula
   desc "Universal CLI wrapper for coding agents (Claude Code, Codex, OpenCode)"
   homepage "https://github.com/mnvsk97/harnessctl"
-  version "0.1.13"
+  version "0.2.1"
   license "MIT"
 
   on_macos do
     on_arm do
       url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-darwin-arm64"
-      sha256 "7f92be2c1ba28e0bc7c768cefeff9600c3395d26964ff3bbf905d379e5f2cec8"
+      sha256 "0b26bf33d2002bfc81c4f947607d8e66e872217007ad41e2e26aedb000eeb275"
     end
     on_intel do
       url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-darwin-x64"
-      sha256 "ac5108454204027a05d0746c77e5e9badbca85f4a95032a97fd885bc7b2c2e47"
+      sha256 "47e9b53c6c1bbe9cac0c6b6707075e40628e735da1cb5ab492ab207a8b48cfaf"
     end
   end
 
   on_linux do
     on_arm do
       url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-linux-arm64"
-      sha256 "80a006380e023487061a461e552ca05ef2472f088941df353a09e12c98defee0"
+      sha256 "7cc74f8e7ca11c575f79d957a2a79b88b8fa478160042b9f46a528e14efc0d50"
     end
     on_intel do
       url "https://github.com/mnvsk97/harnessctl/releases/download/v#{version}/harnessctl-linux-x64"
-      sha256 "4fc8f6bb484bac5a2abd10e271b143c8cc01fe248d1b60246e93fa6bbf9f8cad"
+      sha256 "2d175c604cb91bd80a561553a7d782b1f84157b47f40a93bcb7d37fc10aeac24"
     end
   end
 
